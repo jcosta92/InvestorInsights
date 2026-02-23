@@ -9,6 +9,7 @@
 The objective of this project is to provide the begginer investor with simple company's financial reports.
 
 This project *Investor Insights* is based on a basic analysis of a company's financials and a simplistic method of rating them.
+
 The method of rating each metric and the overall result of the report was done by me (with my modest knowledge about investments), and can be adapted by its user in the template.
 This is an interface between Excel and Python. The Excel template is used to calculate simple formulas and the rating of each metric, whereas the Python model gathers all the info we need via web scraping.
 
