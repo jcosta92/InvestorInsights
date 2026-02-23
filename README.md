@@ -1,212 +1,131 @@
-<h1><b>Leisure Time</b></h1>
-<img align="center" width="1000" alt="Header Image" src="https://raw.githubusercontent.com/jcosta92/LeisureTime/main/02 Readme/header.jpg" />
+<h1><b>Investor Insights</b></h1>
+<img align="center" width="1000" alt="Header Image" src="https://raw.githubusercontent.com/jcosta92/InvestorInsights/main/header.jpg" />
 
 <details>
 <summary><h2>1. Summary</h2></summary>
 
-**Aren’t you tired of choosing a random movie or book to enjoy?**
+**Every investor has to start somewhere!**
 
-The objective of this project is to give you daily recommendations on movies and books, depending on the specific day in question. We have celebrities’ birthdays, international days and anniversaries of certain events, such as famous battles.
+The objective of this project is to provide the begginer investor with simple company's financial reports.
 
-This project that originates *Leisure Time – Movie&Book Recommendation System* is based on an NLP model that was specifically searched for the purpose of connecting one description into another one.
-
-</details>
-
-<details>
-<summary><h2>2. Python files</h2></summary>
-
-- *Books.ipynb*
-- *Days.ipynb*
-- *model.ipynb*
-- *Movies_IMDB.ipynb*
-- *Movies_TMDP_API.ipynb*
-- *appimdb.py*
-- *appimdb2.py*
-- *apptmdb.py*
-- *apptmdb2.py*
+This project *Investor Insights* is based on a basic analysis of a company's financials and a simplistic method of rating them.
+The method of rating each metric and the overall result of the report was done by me (with my modest knowledge about investments), and can be adapted by its user in the template.
+This is an interface between Excel and Python. The Excel template is used to calculate simple formulas and the rating of each metric, whereas the Python model gathers all the info we need via webscrapping.
 
 </details>
 
 <details>
-<summary><h2>3. Datasets</h2></summary>
+<summary><h2>2. Files</h2></summary>
 
-- "01 Queries" folder
-- *df_birthdays_movies.csv*
-- *df_birthdays_books.csv*
-- *days.csv*
-- *matches'%d%m%Y'_TMDB.csv*
-- *matches'%d%m%Y'_IMDB.csv*
-- *goodreads.csv* (downloadable - refer to chapter 5)
-- *best_books.csv*
-- *TMDB_movies_final.csv*
-- *imdb_movie_fetch.csv*
+- *competitors_data.py*
+- *logo_stockanalysis.py*
+- *stock_analysis_data.py*
+- *yfinance_data.py*
+- *Model.ipynb*
+- *report_template.xlsx*
+
+</details>
+
+<details>
+<summary><h2>3. Main Sources</h2></summary>
+
+- Webscrapping:
+   - [*stockanalysis.com*](https://www.stockanalysis.com)
+   - [*marketbeat.com*](https://www.marketbeat.com)
+- Yfinance library
 
 </details>
 
 <details>
 <summary><h2>4. Interface</h2></summary>
-
-
   
-<img align="center" width="1000" alt="Header Image" src="https://raw.githubusercontent.com/jcosta92/LeisureTime/main/02 Readme/Capture.JPG" />
+<img align="center" width="1000" alt="Header Image" src="https://raw.githubusercontent.com/jcosta92/InvestorInsights/main/FlowChart.png" />
 </details>
 
 <details>
-<summary><h2>5. Books</h2></summary>
+<summary><h2>5. Metrics</h2></summary>
 
-The python book used for dealing with the books dataframe was *Books.ipynb*.
-The books dataframe used was from Kaggle, from the following source:
--	[*goodreads.csv*](https://www.kaggle.com/datasets/khushdassani/goodreads-300k-dataset?select=goodreads.csv)
+In this project the following metrics and their performance over the last 5 years are considered for the rating:
+*General*
+- Analysts recommendations
+- Volatility
+- Company's risks
+- Stock performance
 
-The dataset was cleaned to Latin and English titles, using the *langid* library.
-This dataframe was also reduced to the books with a certain minimum rating and votes. In this case, the final dataframe of books has only books with at least **3.5 rating** and **1000 votes** - *best_books.csv*.
-In the end, we get the authors' birthdays by webscraping Wikipedia to add to our Days dataframe - *df_birthdays_books.csv*.
+*Financial Balance*
+- Cash & Equivalents
+- Revenue
+- Net income
+- Total assets
+- Shareholders' Equity
+- Treasury Stock
+- Yearly Net Earnings
+- Gross profit & profit margin
+- SGA costs
+- Operating income
 
-</details>
+*Cashflow*
+- Capital Expenditures
+- Operating Cash Flow
+- Free Cash Flow
+- Net Issuance of stock
 
-<details>
-<summary><h2>6. Movies</h2></summary>
+*Ratios*
+- EPS
+- PE, PFCF, PB, PS
+- PEG
+- CAGR 5Y & 10Y
+- ROA, ROE, ROIC
+- Operating Cash Flow Ratio
+- Current Ratio
+- Debt / Equity Ratio
 
-The focus of this project was the movies, because nowadays we give more focus into television. So there were 2 approaches to get movie data:
+*Dividends*
+- Dividends Paid
+- Payout Ratio
+- Dividend Growth
 
-1.	From TMBD API – using the API from: [*https://www.themoviedb.org/*](https://www.themoviedb.org/)
-
-2.	From IMDB website – using Web Scraping, from IMDB advanced search system
-   Each of the processes takes more than 12 hours to run. Web Scraping can be time-consuming, especially when dealing with big data.
-
-<details>
-<summary><h3>6.1. TMDB API </h3></summary>
-
-To use TMDB API in *Movies_TMDB_API.ipynb* the following steps were made to get the correct bearer and API key: [https://developer.themoviedb.org/reference/intro/getting-started/*](https://developer.themoviedb.org/reference/intro/getting-started/). To get more data, such as actors, budgets, revenues, imdb ids and streams the following source was used: [https://github.com/celiao/tmdbsimple/blob/master/README.md](https://github.com/celiao/tmdbsimple/blob/master/README.md). 
-```python
-base_url = "https://api.themoviedb.org/3/discover/movie"
-headers = {
-"accept": "application/json",
-"Authorization": "Bearer YOUR_BEARER" ######### ------------------------- FROM TMDB API
-}
-```
-```python
-tmdb.API_KEY = 'YOUR_API_KEY' ######## ------------------- select from your TMDB API KEY
-tmdb.REQUESTS_SESSION = requests.Session()
-```
-</details>
-
-<details>
-<summary><h3>6.2. IMDB Web Scrapping </h3></summary>
-
-In this case, I looped through all the genres with a minimum **rating of 5.0** and **3000 votes**, using web scraping to get:
-
-1. Pages URLs
-2. Movies URLs
-3. Web scraping of all the movies URLs to get a dataframe *imdb_movie_fetch.csv* with:
-   - URL
-   - Movie title
-   - Movie image
-   - IMDb Rating
-   - Number of votes
-   - Movie description
-   - Movie genres
-   - Published Date
-   - Content Rating
-   - Actors, writers, and directors
-   - Movie Popularity
-4. Web scraping Wikipedia to get the actors' birthdates - *df_birthdays_movies.csv*.
-
-</details>
+*Valuation*
+- Book Value Per Share
+- Price / Profit Ratio 
 
 </details>
 
 <details>
-<summary><h2>7. Days</h2></summary>
+<summary><h2>6. Template</h2></summary>
 
-To get the dataframe for the days, in *Days.ipynb*, research was done to obtain first the **international days**, and then the **anniversaries of certain events**, from several sources. Lastly, I gathered up also the **anniversaries of authors and actors** that were in the movies and books dataframes.
+The template has several formulas in the 'Comment' and 'Rating' columns that are connected to a hidden sheet.
+The user can adapt this hidden sheet.
+The score is given with a certain weight for each metric - this can also be adapted.
 
-**Sources**: 
--	[https://date.nager.at/api/](https://date.nager.at/api/) - Web scrapping
--	[https://www.un.org/en/observances/list-days-weeks/](https://www.un.org/en/observances/list-days-weeks/) - Web scrapping
--	[https://www.unesco.org/en/days/](https://www.unesco.org/en/days/) - Web scrapping
--	[https://en.wikipedia.org/wiki/](https://en.wikipedia.org/wiki/) - Web scrapping for days’ descriptions and images
--	[http://w.wiki/6Zx/](http://w.wiki/6Zx/) - Manual download of data queries
--	Authors and actors birthdays - got from movies and books dataframes
-
-In the end, all the types of days are in the dataframe *days.csv*.
-</details>
-
-<details>
-<summary><h2>8. Model</h2></summary>
-  
-In *model.ipynb*, the days, books and movies datasets are loaded and put through the chosen model *universal-sentence-encoder*.
-
-```python
-model = hub.load("https://tfhub.dev/google/universal-sentence-encoder/4")
-```
-
-Each type of day can be matched up to 3 movies and 3 books, based on the top similarity ratios calculated by the model.
-Two matches datasets for today’s events are created, one using TMDB API and the other IMDB web scrapping.
-
-</details>
-
-
-<details>
-<summary><h2>9. Flask App</h2></summary>
-
-The flask app does the reading of the matches in that day and display them along the web interface, including also snack and drink recommendations for the movies.
-There are 4 documents that can be used to run the Flask App:
--	*appimdb.py*
--	*apptmdb.py*
--	*appimdb2.py*
--	*apptmdb2.py*
-
-Only the 1st versions *appimdb.py* and *apptmdb.py* include the snacks and drinks recommendations for the movies, using Open AI API. So to use them properly the Open AI key needs to be inside those files in:
-
-```python
-openai.api_key = "YOUR_API_KEY" ##### -------- input your OpenAI API key
-```
-The 2nd versions can be run without any API key input.
-
-The result *Leisure Time* from the *.html* code that is in the “templates” folder gives an overview for one day of each type of days – one international day, one celebrity birthday, and one event anniversary.
-
-<img align="center" width="1000" alt="Header Image" src="https://raw.githubusercontent.com/jcosta92/LeisureTime/main/02 Readme/day.jpg" />
-<img align="center" width="1000" alt="Header Image" src="https://raw.githubusercontent.com/jcosta92/LeisureTime/main/02 Readme/day2.jpg" />
+It is not recommended to change cells in the main sheet (e.g. adding, deleting, etc)
 
 </details>
 
 <details>
-<summary><h2>10. How-to-Run Guide</h2></summary>
+<summary><h2>7. How-to-Run Guide</h2></summary>
 
-0.	If you want, you can skip to **<u>Step 6</u>** and use the already created dataframes for days, movies, books and respective matches (up2date mid Jul23):
-      - *days.csv*
-      - *best_books.csv*
-      - *TMDB_movies_final.csv*
-      - *imdb_movie_fetch.csv*
-1.	Run fully *Books.ipynb* (1st download *goodreads.csv* as per chapter 5) to get *best_books.csv* and *df_birthdays_books.csv*.
-2.	Run *Movies_TMDB_API.ipynb* to get *TMDB_movies_final.csv*.
-    - This process takes several hours – be patient.
-    - Remember to input your Bearer and API Key in the respective code lines (check chapter 6.1)
-3.	Run fully *Movies_IMDB.ipynb* to get *imdb_movie_fetch.csv* and *df_birthdays_movies.csv*
-    - This process takes several hours – be patient.
-4.	Run *Days.ipynb* to get *days.csv* dataframe.
-5.	Run our model - *model2.ipynb* – to get the matches of today.
-    - This model takes roughly 2-3 hours to run for both TMDB and IMDB movies dfs.
-6.	Choose which flask app file *.py* you want to use:
-    - *appimdb.py* – to run with IMDB matched movies (Remember to input your Open AI key)
-    - *apptmdb.py* – to run with TMDB matched movies (Remember to input your Open AI key)
-    - *appimdb2.py* – to run with IMDB matched movies, without snacks&drinks recommendations for movies (best if you don’t want to use APIs)
-    - *apptmdb2.py* – to run with TMDB matched movies, without snacks&drinks recommendations for movies (best if you don’t want to use APIs)
-7.	In GitBash, or another command prompt software, go to the location of your forked repository and type: python *“selected_app.py”*. Should appear something like this:
-
-<img align="center" width="600" alt="Header Image" src="https://raw.githubusercontent.com/jcosta92/LeisureTime/main/02 Readme/flask.jpg" />
-
-
-8.	Now, you just need to go to your internet browser and type the selected host, e.g. *http://127.0.0.1:5000* from above.
-9.	Voilà.
+1.	Download the folder into your disk.
+2.	Install Inkscape: [Link](https://inkscape.org/release/inkscape-1.4.2/windows/64-bit/msi/dl/)
+3.	In the file *logo_stockanalysis.py* this path is used inkscape_path = r"C:\Program Files\Inkscape\bin\inkscape.exe". Make sure that this is the same installed path for this software.
+4.	Make sure you have all the pips installed for the following imports:
+    **import re
+    import requests
+    from bs4 import BeautifulSoup
+    import pandas as pd
+    import numpy as np
+  	import yfinance as yf
+  	from pathlib import Path
+    import subprocess
+    import urllib3
+  	from typing import Dict, Any, Tuple, Optional
+  	import datetime as dt
+  	import matplotlib
+  	import matplotlib.pyplot as plt**
+5.	Open *Model.ipnyb*.
+6.	Go to the 4th cell and choose the tickers of the companies you want.
+7.	Run the full code of the file.
+8.	Now your reports are in the "Reports" folder.
 
 </details>
 
-<details>
-<summary><h2>11. Web Display</h2></summary>
-The flask app is also display in the following website, using appimdb3.py:
-  
-- [https://leisure-time-5b9ed2cf23e8.herokuapp.com/](https://leisure-time-5b9ed2cf23e8.herokuapp.com/)
-
-</details>
