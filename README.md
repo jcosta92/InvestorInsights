@@ -109,7 +109,7 @@ It is not recommended to change cells in the main sheet (e.g. adding, deleting, 
 2.	Install Inkscape: [Link](https://inkscape.org/release/inkscape-1.4.2/windows/64-bit/msi/dl/)
 3.	In the file *logo_stockanalysis.py* this path is used *inkscape_path = r"C:\Program Files\Inkscape\bin\inkscape.exe"*. Make sure that this is the same installed path for this software.
 4.	Make sure you have all the pips installed for the following imports:
-    **- import re
+    - import re
     - import requests
     - from bs4 import BeautifulSoup
     - import pandas as pd
@@ -121,7 +121,7 @@ It is not recommended to change cells in the main sheet (e.g. adding, deleting, 
   	 - from typing import Dict, Any, Tuple, Optional
   	 - import datetime as dt
   	 - import matplotlib
-  	 - import matplotlib.pyplot as plt**
+  	 - import matplotlib.pyplot as plt
 6.	Open *Model.ipnyb*.
 7.	Go to the 4th cell and choose the tickers of the companies you want.
 8.	Run the full code of the file.
