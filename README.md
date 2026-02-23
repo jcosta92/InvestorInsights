@@ -10,7 +10,7 @@ The objective of this project is to provide the begginer investor with simple co
 
 This project *Investor Insights* is based on a basic analysis of a company's financials and a simplistic method of rating them.
 The method of rating each metric and the overall result of the report was done by me (with my modest knowledge about investments), and can be adapted by its user in the template.
-This is an interface between Excel and Python. The Excel template is used to calculate simple formulas and the rating of each metric, whereas the Python model gathers all the info we need via webscrapping.
+This is an interface between Excel and Python. The Excel template is used to calculate simple formulas and the rating of each metric, whereas the Python model gathers all the info we need via web scraping.
 
 *Please note that this project is only for recreational purposes and not for commercial use!*
 
@@ -31,7 +31,7 @@ This is an interface between Excel and Python. The Excel template is used to cal
 <details open>
 <summary><h2>3. Main Sources</h2></summary>
 
-- Webscrapping:
+- Web scraping:
    - [*stockanalysis.com*](https://www.stockanalysis.com)
    - [*marketbeat.com*](https://www.marketbeat.com)
 - Yfinance library
