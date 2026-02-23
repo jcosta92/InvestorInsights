@@ -1,7 +1,7 @@
 <h1><b>Investor Insights</b></h1>
 <img align="center" width="1000" alt="Header Image" src="https://raw.githubusercontent.com/jcosta92/InvestorInsights/main/header.jpg" />
 
-<details>
+<details open>
 <summary><h2>1. Summary</h2></summary>
 
 **Every investor has to start somewhere!**
@@ -12,9 +12,11 @@ This project *Investor Insights* is based on a basic analysis of a company's fin
 The method of rating each metric and the overall result of the report was done by me (with my modest knowledge about investments), and can be adapted by its user in the template.
 This is an interface between Excel and Python. The Excel template is used to calculate simple formulas and the rating of each metric, whereas the Python model gathers all the info we need via webscrapping.
 
+*Please note that this project is only for recreational purposes and not for commercial use!*
+
 </details>
 
-<details>
+<details open>
 <summary><h2>2. Files</h2></summary>
 
 - *competitors_data.py*
@@ -26,7 +28,7 @@ This is an interface between Excel and Python. The Excel template is used to cal
 
 </details>
 
-<details>
+<details open>
 <summary><h2>3. Main Sources</h2></summary>
 
 - Webscrapping:
@@ -36,13 +38,13 @@ This is an interface between Excel and Python. The Excel template is used to cal
 
 </details>
 
-<details>
+<details open>
 <summary><h2>4. Interface</h2></summary>
   
 <img align="center" width="1000" alt="Header Image" src="https://raw.githubusercontent.com/jcosta92/InvestorInsights/main/FlowChart.png" />
 </details>
 
-<details>
+<details open>
 <summary><h2>5. Metrics</h2></summary>
 
 In this project the following metrics and their performance over the last 5 years are considered for the rating:
@@ -91,7 +93,7 @@ In this project the following metrics and their performance over the last 5 year
 
 </details>
 
-<details>
+<details open>
 <summary><h2>6. Template</h2></summary>
 
 The template has several formulas in the 'Comment' and 'Rating' columns that are connected to a hidden sheet.
@@ -102,7 +104,7 @@ It is not recommended to change cells in the main sheet (e.g. adding, deleting, 
 
 </details>
 
-<details>
+<details open>
 <summary><h2>7. How-to-Run Guide</h2></summary>
 
 1.	Download the folder into your disk.
