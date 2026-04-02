@@ -140,14 +140,21 @@ def _load_full_stockanalysis_dataset(mainticker: str) -> pd.DataFrame:
             if has_current:
                 new_cols = ["Current"] + [c for c in page_df.columns if c != "Current"]
                 page_df = page_df[new_cols]
-
+        
+        # changing "," with "" in strings
+        def _replace_comma(x):
+            if isinstance(x, str):
+                return x.replace(",", "")
+            return x
+        
         # changing "." with "," in strings
         def _replace_dot(x):
             if isinstance(x, str):
                 return x.replace(".", ",")
             return x
-
-        page_df = page_df.applymap(_replace_dot)
+        
+        page_df = page_df.map(_replace_comma)
+        page_df = page_df.map(_replace_dot)
 
         dfs.append(page_df)
 
