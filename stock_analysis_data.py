@@ -9,15 +9,17 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 
+from stockanalysis_resolver import get_stockanalysis_base_url
+
 
 # scrape StockAnalysis pages and build combined df with all the financials
 
-def _load_full_stockanalysis_dataset(mainticker: str) -> pd.DataFrame:
+def _load_full_stockanalysis_dataset(mainticker: str, exchange: str = None) -> pd.DataFrame:
 
     ticker = mainticker.upper()
 
     # different pages
-    base = f"https://stockanalysis.com/stocks/{ticker.lower()}/financials"
+    base = get_stockanalysis_base_url(ticker, exchange=exchange) + "/financials"
     pages = [
         base + "/",                       # Overview 
         base + "/balance-sheet/",         # Balance Sheet
@@ -178,9 +180,9 @@ def _load_full_stockanalysis_dataset(mainticker: str) -> pd.DataFrame:
 
 
 ## main function to be called
-def get_stockanalysis_package(mainticker: str) -> Dict[str, Any]:
+def get_stockanalysis_package(mainticker: str, exchange: str = None) -> Dict[str, Any]:
 
-    combined = _load_full_stockanalysis_dataset(mainticker)
+    combined = _load_full_stockanalysis_dataset(mainticker, exchange=exchange)
 
     return {
         "ticker": mainticker,

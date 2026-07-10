@@ -21,12 +21,29 @@ try:
 except ImportError:
     HAS_YF = False
 
+from stockanalysis_resolver import (
+    get_stockanalysis_base_url,
+    TickerNotFoundError,
+    TickerAmbiguousError,
+)
+
 
 #  MarketBeat – check Competitors
-def get_competitors_from_marketbeat(ticker: str, verbose: bool = True) -> pd.DataFrame:
+def get_competitors_from_marketbeat(ticker: str, exchange: str = None, verbose: bool = True) -> pd.DataFrame:
 
     # Use the ticker we have to check competitors
     ticker = ticker.upper()
+
+    # MarketBeat only covers US-exchange listings. If we already know this
+    # ticker belongs to a non-US exchange (StockAnalysis exchange code, e.g.
+    # "etr", "tyo"), skip MarketBeat entirely rather than risk matching an
+    # unrelated US company that happens to share the same ticker letters
+    # (e.g. "ENR" = Siemens Energy on etr, but also Energizer Holdings on NYSE).
+    us_exchange_codes = {None, "nasdaq", "nyse", "arca", "amex", "otc"}
+    if exchange is not None and exchange.lower() not in us_exchange_codes:
+        if verbose:
+            print(f"  Skipping MarketBeat for {ticker}: not a US exchange listing ({exchange}).")
+        return pd.DataFrame({"ticker": [ticker]})
 
     # Exchanges to explore
     exchanges = ["NASDAQ", "NYSE", "ARCA", "AMEX", "OTC"]
@@ -40,47 +57,55 @@ def get_competitors_from_marketbeat(ticker: str, verbose: bool = True) -> pd.Dat
     }
 
     def _extract_from_paragraph(soup: BeautifulSoup):
+        # Extract peers from title like:
+        # "NVDA vs. AAPL, AMD, AMZN, AVGO, and GOOG"
 
-        # webscrape competitors
-        para = None
-        for p in soup.find_all("p"):
-            text = p.get_text(strip=True)
-            if "The main competitors of" in text:
-                para = text
-                break
+        h2 = soup.find("h2", class_="large-section-h mt-0")
 
-        if not para:
+        if not h2:
             return []
 
-        text = para.strip()
-        peers = re.findall(r"\(([A-Za-z\.]+)\)", text) # extracting the ticker
-        return [p.upper() for p in peers]
+        text = h2.get_text(" ", strip=True)
+
+        if " vs. " not in text:
+            return []
+
+        peers_part = text.split(" vs. ", 1)[1]
+        peers_part = peers_part.replace(" and ", ", ")
+
+        peers = [p.strip().upper() for p in peers_part.split(",") if p.strip()]
+
+        return peers
 
     def _extract_from_table(soup: BeautifulSoup):
+        table = soup.find("table", id="competitors-table")
 
-        # workaround if upper function doesnt work
-        heading = soup.find(string=lambda s: s and "Competitors List" in s)
-        if not heading:
-            return []
-        
-        # The table is usually the next <table> after the heading container
-        htag = heading.parent
-        table = htag.find_next("table")
         if not table:
             return []
 
-        # first column of the body
         peers = []
+
         for row in table.find_all("tr"):
             cells = row.find_all("td")
+
             if not cells:
                 continue
-            # Ticker is inside a link in the first td
-            a = cells[0].find("a")
-            if a and a.get_text():
-                t = a.get_text(strip=True)
-                if t:
-                    peers.append(t.upper())
+
+            cell = cells[0]
+
+            clean_data = cell.get("data-clean", "")
+
+            if "|" in clean_data:
+                ticker = clean_data.split("|")[-1].strip().upper()
+                peers.append(ticker)
+                continue
+
+            ticker_div = cell.find("div", class_="ticker-area")
+
+            if ticker_div:
+                ticker = ticker_div.get_text(strip=True).upper()
+                peers.append(ticker)
+
         return peers
 
     # Try each exchange until we find one that works
@@ -207,10 +232,19 @@ def _parse_float_sa(text: str):
         return np.nan
 
 #### scraping the ratios
-def get_ratios_from_stockanalysis(ticker: str, verbose: bool = True) -> pd.DataFrame:
+def get_ratios_from_stockanalysis(ticker: str, exchange: str = None, verbose: bool = True) -> pd.DataFrame:
 
-    ticker = ticker.lower()
-    url = f"https://stockanalysis.com/stocks/{ticker}/financials/ratios/"
+    ticker = ticker.upper()
+
+    # a peer ticker (scraped from MarketBeat) may be malformed or not covered
+    # by StockAnalysis at all; treat that the same as a 404 - skip it rather
+    # than blowing up the whole report.
+    try:
+        url = get_stockanalysis_base_url(ticker, exchange=exchange) + "/financials/ratios/"
+    except (TickerNotFoundError, TickerAmbiguousError) as e:
+        if verbose:
+            print(f"  -> Could not resolve '{ticker}' on StockAnalysis ({e}), returning empty dataframe.")
+        return pd.DataFrame(columns=["ticker", "metric", "Current"])
 
     #if verbose:
         #print(f"Fetching ratios from: {url}")
@@ -321,12 +355,27 @@ def get_ratios_from_stockanalysis(ticker: str, verbose: bool = True) -> pd.DataF
     return df_rat
 
 
-def get_ratios_for_peers_from_stockanalysis(df_peers: pd.DataFrame, verbose: bool = True) -> pd.DataFrame:
+def get_ratios_for_peers_from_stockanalysis(
+    df_peers: pd.DataFrame,
+    main_ticker: str = None,
+    main_exchange: str = None,
+    main_yf_ticker: str = None,
+    verbose: bool = True,
+) -> pd.DataFrame:
     """
     For each ticker in df_peers['ticker'], scrapes the ratios from StockAnalysis
     (using get_ratios_from_stockanalysis) and pivots them into a single dataframe
     with columns = metrics and rows = tickers. Adds 5Y CAGR and 10Y CAGR
     based on price history via yfinance (in percentage values, e.g. 12.5 = 12.5%).
+
+    `main_exchange` (a StockAnalysis exchange code, e.g. "etr", "tyo") is only
+    applied to `main_ticker`'s own row — peers come from MarketBeat, which is
+    always a US-exchange listing, so they resolve fine without an exchange hint.
+
+    `main_yf_ticker` is the Yahoo Finance ticker (e.g. "ENR.DE") for the main
+    company's CAGR calculation — yfinance uses its own exchange-suffix
+    convention, unrelated to StockAnalysis exchange codes, so a bare non-US
+    ticker like "ENR" can silently resolve to an unrelated US company there.
     """
 
     peer_tickers = df_peers["ticker"].tolist()
@@ -335,7 +384,9 @@ def get_ratios_for_peers_from_stockanalysis(df_peers: pd.DataFrame, verbose: boo
     for tk in peer_tickers:
         #if verbose:
             #print(f"\nFetching ratios for peer: {tk}")
-        df_rat = get_ratios_from_stockanalysis(tk, verbose=verbose)
+        is_main = bool(main_ticker) and tk.upper() == main_ticker.upper()
+        tk_exchange = main_exchange if is_main else None
+        df_rat = get_ratios_from_stockanalysis(tk, exchange=tk_exchange, verbose=verbose)
 
         if df_rat.empty:
             if verbose:
@@ -363,8 +414,9 @@ def get_ratios_for_peers_from_stockanalysis(df_peers: pd.DataFrame, verbose: boo
             row_data[short_name] = val
 
         # ---------- 5Y / 10Y Price CAGR ----------
-        c5 = get_price_cagr(tk, 5)
-        c10 = get_price_cagr(tk, 10)
+        yf_tk = main_yf_ticker if (is_main and main_yf_ticker) else tk
+        c5 = get_price_cagr(yf_tk, 5)
+        c10 = get_price_cagr(yf_tk, 10)
 
         # store in percentage (12.5 = 12.5%)
         row_data["5Y CAGR"] = c5 * 100 if c5 is not None and not np.isnan(c5) else np.nan
@@ -390,27 +442,34 @@ def get_ratios_for_peers_from_stockanalysis(df_peers: pd.DataFrame, verbose: boo
 
 #  wrapper functions
 
-def _build_df_ratios_for_ticker(mainticker: str) -> pd.DataFrame:
+def _build_df_ratios_for_ticker(mainticker: str, exchange: str = None, yf_ticker: str = None) -> pd.DataFrame:
     """
     Builds df_ratios for a given ticker, using the helper functions above.
     This mirrors the end-to-end example in the original notebook.
     """
     mainticker = mainticker.upper()
-    # 1) get competitors from MarketBeat
-    df_peers = get_competitors_from_marketbeat(mainticker)
+    # 1) get competitors from MarketBeat (skipped automatically for non-US exchanges)
+    df_peers = get_competitors_from_marketbeat(mainticker, exchange=exchange)
     # 2) get ratios for those tickers from StockAnalysis and calculates CAGRs from yfinance
-    df_ratios = get_ratios_for_peers_from_stockanalysis(df_peers)
+    df_ratios = get_ratios_for_peers_from_stockanalysis(
+        df_peers, main_ticker=mainticker, main_exchange=exchange, main_yf_ticker=yf_ticker
+    )
     return df_ratios
 
 
-def get_competitors_package(mainticker: str) -> Dict[str, Any]:
+def get_competitors_package(mainticker: str, exchange: str = None, yf_ticker: str = None) -> Dict[str, Any]:
     """
     External API: given a ticker, returns a dict with:
         - "ticker": mainticker
         - "df_ratios": dataframe with ratios for the ticker and its competitors
                        (including 5Y CAGR and 10Y CAGR in percentage values)
+
+    `exchange` is a StockAnalysis exchange code (e.g. "etr", "tyo") for tickers
+    not listed on a US exchange; leave it None for plain US tickers.
+    `yf_ticker` is the Yahoo Finance ticker (e.g. "ENR.DE") used for the main
+    company's CAGR calculation, if it differs from `mainticker`.
     """
-    df_ratios = _build_df_ratios_for_ticker(mainticker)
+    df_ratios = _build_df_ratios_for_ticker(mainticker, exchange=exchange, yf_ticker=yf_ticker)
     return {
         "ticker": mainticker,
         "df_ratios": df_ratios,
