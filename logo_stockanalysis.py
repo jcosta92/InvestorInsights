@@ -10,15 +10,12 @@ from pathlib import Path
 import subprocess
 import urllib3
 
-from stockanalysis_resolver import get_stockanalysis_base_url
-
 # disable warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 def get_logo_png(
     ticker: str,
-    exchange: str = None,
     out_dir: str = "logos",
     dpi: int = 300,
     verbose: bool = True,
@@ -28,8 +25,9 @@ def get_logo_png(
     inkscape_path = r"C:\Program Files\Inkscape\bin\inkscape.exe"
     # 🔥 Adjust this path if Inkscape is installed elsewhere!! 🔥
 
+    ticker_lower = ticker.lower()
     ticker_upper = ticker.upper()
-    page_url = get_stockanalysis_base_url(ticker, exchange=exchange) + "/company/"
+    page_url = f"https://stockanalysis.com/stocks/{ticker_lower}/company/"
 
     #if verbose:
        # print(f"[logo] Fetching HTML from: {page_url}")
@@ -46,48 +44,36 @@ def get_logo_png(
 
     soup = BeautifulSoup(resp.text, "html.parser")
 
-    # US "/stocks/.../company/" pages serve the logo as an SVG from
-    # logos.stockanalysis.com; international "/quote/{exchange}/.../company/"
-    # pages serve it as a PNG from img.stockanalysis.com instead.
-    logo_tag = soup.find(
-        "img",
-        src=lambda s: s and ("logos.stockanalysis.com" in s or "img.stockanalysis.com/logos" in s),
-    )
+    # find <img> whose src contains "logos.stockanalysis.com"
+    logo_tag = soup.find("img", src=lambda s: s and "logos.stockanalysis.com" in s)
     if not logo_tag:
         print("[logo] Could not find logo img in HTML.")
         return None
 
-    logo_url = logo_tag["src"]
+    svg_url = logo_tag["src"]
     #if verbose:
-        #print(f"[logo] Found logo URL: {logo_url}")
+        #print(f"[logo] Found SVG URL: {svg_url}")
 
-    # download logo
+    # download SVG
     try:
-        logo_resp = requests.get(logo_url, timeout=10, verify=False)
+        svg_resp = requests.get(svg_url, timeout=10, verify=False)
     except Exception as e:
-        print(f"[logo] Error downloading logo: {e}")
+        print(f"[logo] Error downloading SVG: {e}")
         return None
 
-    if logo_resp.status_code != 200:
-        print(f"[logo] Failed to download logo: HTTP {logo_resp.status_code}")
+    if svg_resp.status_code != 200:
+        print(f"[logo] Failed to download SVG: HTTP {svg_resp.status_code}")
         return None
 
     out_dir_path = Path(out_dir)
     out_dir_path.mkdir(parents=True, exist_ok=True)
 
-    png_path = out_dir_path / f"{ticker_upper}.png"
-
-    # already a raster image (e.g. PNG from img.stockanalysis.com) - save directly
-    if not logo_url.lower().endswith(".svg"):
-        with open(png_path, "wb") as f:
-            f.write(logo_resp.content)
-        return png_path
-
     svg_path = out_dir_path / f"{ticker_upper}.svg"
+    png_path = out_dir_path / f"{ticker_upper}.png"
 
     # Save SVG to disk
     with open(svg_path, "wb") as f:
-        f.write(logo_resp.content)
+        f.write(svg_resp.content)
 
     #if verbose:
        # print(f"[logo] Saved SVG to: {svg_path}")

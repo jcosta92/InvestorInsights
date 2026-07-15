@@ -9,17 +9,15 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 
-from stockanalysis_resolver import get_stockanalysis_base_url
-
 
 # scrape StockAnalysis pages and build combined df with all the financials
 
-def _load_full_stockanalysis_dataset(mainticker: str, exchange: str = None) -> pd.DataFrame:
+def _load_full_stockanalysis_dataset(mainticker: str) -> pd.DataFrame:
 
     ticker = mainticker.upper()
 
     # different pages
-    base = get_stockanalysis_base_url(ticker, exchange=exchange) + "/financials"
+    base = f"https://stockanalysis.com/stocks/{ticker.lower()}/financials"
     pages = [
         base + "/",                       # Overview 
         base + "/balance-sheet/",         # Balance Sheet
@@ -142,6 +140,7 @@ def _load_full_stockanalysis_dataset(mainticker: str, exchange: str = None) -> p
             if has_current:
                 new_cols = ["Current"] + [c for c in page_df.columns if c != "Current"]
                 page_df = page_df[new_cols]
+
         
         # changing "," with "" in strings
         def _replace_comma(x):
@@ -154,7 +153,7 @@ def _load_full_stockanalysis_dataset(mainticker: str, exchange: str = None) -> p
             if isinstance(x, str):
                 return x.replace(".", ",")
             return x
-        
+    
         page_df = page_df.map(_replace_comma)
         page_df = page_df.map(_replace_dot)
 
@@ -180,9 +179,9 @@ def _load_full_stockanalysis_dataset(mainticker: str, exchange: str = None) -> p
 
 
 ## main function to be called
-def get_stockanalysis_package(mainticker: str, exchange: str = None) -> Dict[str, Any]:
+def get_stockanalysis_package(mainticker: str) -> Dict[str, Any]:
 
-    combined = _load_full_stockanalysis_dataset(mainticker, exchange=exchange)
+    combined = _load_full_stockanalysis_dataset(mainticker)
 
     return {
         "ticker": mainticker,
