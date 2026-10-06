@@ -239,84 +239,84 @@ def get_ratios_from_stockanalysis(ticker: str, verbose: bool = True) -> pd.DataF
 
     soup = BeautifulSoup(resp.text, "html.parser")
 
-    tables = soup.find_all("table")
-    target_table = None
+    # the ratios page is split into several tables (one per section:
+    # market value, valuation, leverage, returns, ...) - parse all of them
+    target_tables = []
 
-    for tbl in tables:
+    for tbl in soup.find_all("table"):
         hdr = tbl.find("thead")
         if not hdr:
             continue
         header_cells = [th.get_text(strip=True) for th in hdr.find_all("th")]
         if any(h in header_cells for h in ("Current", "TTM")) and "Fiscal Year" in "".join(header_cells):
-            target_table = tbl
-            break
+            target_tables.append(tbl)
 
-    if target_table is None:
+    if not target_tables:
         if verbose:
             print("  Could not find a valid ratios table, returning empty dataframe.")
         return pd.DataFrame(columns=["ticker", "metric", "Current"])
 
-    # Now parse the header row that contains 'Fiscal Year' / 'Current' / 'TTM'
-    header_row = None
-    for tr in target_table.find_all("tr"):
-        ths = tr.find_all("th")
-        if not ths:
-            continue
-        texts = [th.get_text(strip=True) for th in ths]
-        if any("Fiscal Year" in t for t in texts):
-            header_row = tr
-            break
-
-    if header_row is None:
-        if verbose:
-            print("  Could not find 'Fiscal Year' header row. Returning empty df.")
-        return pd.DataFrame(columns=["ticker", "metric", "Current"])
-
-    cols = []
-    for th in header_row.find_all("th"):
-        text = th.get_text(strip=True)
-        if text in ("Fiscal Year", "2016 - 2019"):
-            continue
-        cols.append(text)
-
-    if "Current" in cols:
-        current_idx = cols.index("Current")
-    elif "TTM" in cols:
-        current_idx = cols.index("TTM")
-    else:
-        current_idx = 0
-        if verbose:
-            print("  Warning: 'Current'/'TTM' not found. Using first data column as Current.")
-
     metrics = []
     values = []
 
-    for tr in target_table.find_all("tr"):
-        tds = tr.find_all("td")
-        if not tds:
+    for target_table in target_tables:
+
+        # parse the header row that contains 'Fiscal Year' / 'Current' / 'TTM'
+        header_row = None
+        for tr in target_table.find_all("tr"):
+            ths = tr.find_all("th")
+            if not ths:
+                continue
+            texts = [th.get_text(strip=True) for th in ths]
+            if any("Fiscal Year" in t for t in texts):
+                header_row = tr
+                break
+
+        if header_row is None:
             continue
 
-        label_cell = tds[0]
-        a = label_cell.find("a")
-        if a and a.get_text(strip=True):
-            metric_name = a.get_text(strip=True)
+        cols = []
+        for th in header_row.find_all("th"):
+            text = th.get_text(strip=True)
+            if text in ("Fiscal Year", "2016 - 2019"):
+                continue
+            cols.append(text)
+
+        if "Current" in cols:
+            current_idx = cols.index("Current")
+        elif "TTM" in cols:
+            current_idx = cols.index("TTM")
         else:
-            metric_name = label_cell.get_text(" ", strip=True)
+            current_idx = 0
+            if verbose:
+                print("  Warning: 'Current'/'TTM' not found. Using first data column as Current.")
 
-        metric_name = re.sub(r"\s+", " ", metric_name).strip()
+        for tr in target_table.find_all("tr"):
+            tds = tr.find_all("td")
+            if not tds:
+                continue
 
-        data_cells = [td.get_text(strip=True) for td in tds[1:]]
-        if not data_cells:
-            continue
+            label_cell = tds[0]
+            a = label_cell.find("a")
+            if a and a.get_text(strip=True):
+                metric_name = a.get_text(strip=True)
+            else:
+                metric_name = label_cell.get_text(" ", strip=True)
 
-        while len(data_cells) < len(cols):
-            data_cells.append("")
+            metric_name = re.sub(r"\s+", " ", metric_name).strip()
 
-        current_text = data_cells[current_idx]
-        current_value = _parse_float_sa(current_text)
+            data_cells = [td.get_text(strip=True) for td in tds[1:]]
+            if not data_cells:
+                continue
 
-        metrics.append(metric_name)
-        values.append(current_value)
+            while len(data_cells) < len(cols):
+                data_cells.append("")
+
+            current_text = data_cells[current_idx]
+            current_value = _parse_float_sa(current_text)
+
+            metrics.append(metric_name)
+            values.append(current_value)
 
     df_rat = pd.DataFrame(
         {
@@ -363,6 +363,10 @@ def get_ratios_for_peers_from_stockanalysis(df_peers: pd.DataFrame, verbose: boo
             "Return on Capital (ROIC)": "ROIC",
             "Debt / Equity Ratio": "D/E",
         }
+
+        # StockAnalysis renamed this metric
+        if "Return on Invested Capital (ROIC)" in metric_map:
+            metric_map.setdefault("Return on Capital (ROIC)", metric_map["Return on Invested Capital (ROIC)"])
 
         row_data = {"ticker": tk}
 

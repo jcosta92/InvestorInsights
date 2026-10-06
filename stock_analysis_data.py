@@ -10,6 +10,13 @@ from bs4 import BeautifulSoup
 import pandas as pd
 
 
+# StockAnalysis occasionally renames metrics; map the new names back to the
+# labels used in column B of report_template.xlsx so the rows still match
+LABEL_ALIASES = {
+    "Return on Invested Capital (ROIC)": "Return on Capital (ROIC)",
+}
+
+
 # scrape StockAnalysis pages and build combined df with all the financials
 
 def _load_full_stockanalysis_dataset(mainticker: str) -> pd.DataFrame:
@@ -19,7 +26,7 @@ def _load_full_stockanalysis_dataset(mainticker: str) -> pd.DataFrame:
     # different pages
     base = f"https://stockanalysis.com/stocks/{ticker.lower()}/financials"
     pages = [
-        base + "/",                       # Overview 
+        base + "/income-statement/",      # Income Statement (base + "/" is now only a summary overview)
         base + "/balance-sheet/",         # Balance Sheet
         base + "/cash-flow-statement/",   # Cash Flow
         base + "/ratios/",                # Ratios
@@ -93,6 +100,8 @@ def _load_full_stockanalysis_dataset(mainticker: str) -> pd.DataFrame:
             else:
                 label = tds[0].get_text(" ", strip=True)
                 metric_name = re.sub(r"\s+", " ", label).strip()
+
+            metric_name = LABEL_ALIASES.get(metric_name, metric_name)
 
             # rest of values, ignoring "Upgrade" function of website
             vals = []
