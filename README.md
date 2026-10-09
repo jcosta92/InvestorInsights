@@ -2,6 +2,22 @@
 <img align="center" width="1000" alt="Header Image" src="https://raw.githubusercontent.com/jcosta92/InvestorInsights/main/header.jpg" />
 
 <details open>
+<summary><h2>0. Run it as an app</h2></summary>
+
+```bash
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+Type a ticker, press **Build report**: the app scrapes the data, fills the template, rates every metric and shows the overall score, the price history, the financials, the competitors and the company profile, with the Excel and PDF reports to download. About 30 seconds per ticker; results are cached for 6 hours.
+
+The PDF and the ratings need a spreadsheet engine to calculate the template's formulas: Excel on Windows (used automatically) or [LibreOffice](https://www.libreoffice.org/) anywhere (`soffice` on the PATH). The logo still needs Inkscape, as before; without it the report has no logo.
+
+Code layout: the scrapers are unchanged (`yfinance_data.py`, `stock_analysis_data.py`, `competitors_data.py`, `logo_stockanalysis.py`); `investor_insights/pipeline.py` assembles their output and `investor_insights/report.py` fills and exports the template; `app.py` is the interface and `Model.ipynb` runs the same thing for a list of tickers.
+
+</details>
+
+<details open>
 <summary><h2>1. Summary</h2></summary>
 
 **Every investor has to start somewhere!**
@@ -25,6 +41,7 @@ This is an interface between Excel and Python. The Excel template is used to cal
 - *stock_analysis_data.py*
 - *yfinance_data.py*
 - *Model.ipynb*
+- *app.py* and *investor_insights/* (app and shared pipeline)
 - *report_template.xlsx*
 
 </details>

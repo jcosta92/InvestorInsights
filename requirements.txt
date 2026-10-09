@@ -1,0 +1,10 @@
+pandas>=2.0
+numpy
+requests
+beautifulsoup4
+yfinance>=0.2.40
+openpyxl
+pillow
+matplotlib
+streamlit>=1.40
+pywin32; sys_platform == "win32"

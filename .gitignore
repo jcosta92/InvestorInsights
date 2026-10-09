@@ -3,3 +3,5 @@ __pycache__/
 reports/
 logos/
 charts/
+.vs/
+.ipynb_checkpoints/
