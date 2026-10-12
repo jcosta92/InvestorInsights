@@ -13,6 +13,8 @@ Type a ticker, press **Build report**: the app scrapes the data, fills the templ
 
 The PDF and the ratings need a spreadsheet engine to calculate the template's formulas: Excel on Windows (used automatically) or [LibreOffice](https://www.libreoffice.org/) anywhere (`soffice` on the PATH). The logo still needs Inkscape, as before; without it the report has no logo.
 
+**Hosted version (Streamlit Community Cloud).** The repo has `packages.txt` (LibreOffice and Inkscape for the PDF, the formulas and the logo) and `.streamlit/config.toml`. To publish: sign in at share.streamlit.io with GitHub, *Create app*, pick `jcosta92/InvestorInsights`, branch `main`, main file `app.py`, *Deploy*. The first build takes a few minutes; afterwards every push to `main` redeploys. If StockAnalysis or MarketBeat block the host's IP, the app shows the error with the traceback.
+
 Code layout: the scrapers are unchanged (`yfinance_data.py`, `stock_analysis_data.py`, `competitors_data.py`, `logo_stockanalysis.py`); `investor_insights/pipeline.py` assembles their output and `investor_insights/report.py` fills and exports the template; `app.py` is the interface and `Model.ipynb` runs the same thing for a list of tickers.
 
 </details>
