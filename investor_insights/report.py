@@ -58,12 +58,17 @@ def recalculate_and_export(xlsx_path: str, want_pdf: bool = True) -> Dict[str, O
         subprocess.run([soffice, "--headless", "--calc", "--convert-to", "xlsx", "--outdir", tmp, xlsx_path],
                        check=True, capture_output=True, timeout=180, env=env)
         shutil.move(os.path.join(tmp, os.path.basename(xlsx_path)), xlsx_path)
-        pdf = None
+        pdf, error = None, None
         if want_pdf:
-            subprocess.run([soffice, "--headless", "--calc", "--convert-to", "pdf", "--outdir", out_dir, xlsx_path],
-                           check=True, capture_output=True, timeout=180, env=env)
-            pdf = os.path.splitext(xlsx_path)[0] + ".pdf"
-    return {"xlsx": xlsx_path, "pdf": pdf, "recalculated": True}
+            target = os.path.splitext(xlsx_path)[0] + ".pdf"
+            r = subprocess.run([soffice, "--headless", "--calc", "--convert-to", "pdf:calc_pdf_Export", "--outdir", out_dir, xlsx_path],
+                               capture_output=True, text=True, timeout=180, env=env)
+            if os.path.isfile(target) and os.path.getsize(target) > 0:
+                pdf = target
+            else:
+                error = (r.stderr or r.stdout or f"exit code {r.returncode}").strip()[-500:]
+                print(f"[report] PDF export failed: {error}")
+    return {"xlsx": xlsx_path, "pdf": pdf, "recalculated": True, "pdf_error": error}
 
 
 def read_scores(xlsx_path: str) -> Dict[str, Any]:
@@ -88,7 +93,14 @@ def read_scores(xlsx_path: str) -> Dict[str, Any]:
         d = df.dropna(subset=["rating", "weight"]).astype({"rating": float, "weight": float})
         by_cat = (d.assign(w=d.rating * d.weight).groupby("category", sort=False).agg(score=("w", "sum"), weight=("weight", "sum")))
         by_cat["score"] = by_cat.score / (5 * by_cat.weight)
-    return {"overall": None if overall in (None, "") else float(overall), "metrics": df,
+    # the template's overall is 0 when the sentiment rating is empty (its formula starts from it);
+    # overall_available is the same weighted average over the metrics that do have a rating
+    overall_available = None
+    if not df.empty:
+        d = df.dropna(subset=["rating", "weight"]).astype({"rating": float, "weight": float})
+        if d.weight.sum() > 0:
+            overall_available = float((d.rating * d.weight).sum() / (5 * d.weight.sum()))
+    return {"overall": None if overall in (None, "") else float(overall), "overall_available": overall_available, "metrics": df,
             "by_category": by_cat, "sentiment": ws["L13"].value, "volatility": ws["M15"].value}
 
 
@@ -577,6 +589,7 @@ def create_basic_report(
     elif export_pdf or recalc:
         res = recalculate_and_export(output_excel, want_pdf=export_pdf)
         output_pdf = res["pdf"]
+        create_basic_report.last_pdf_error = res.get("pdf_error")
 
     # ---------- 10) Cleaning temp files ----------
     for f in tmp_files:

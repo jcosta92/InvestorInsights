@@ -13,13 +13,30 @@ import pandas as pd
 from competitors_data import get_competitors_package
 from logo_stockanalysis import get_logo_png
 from stock_analysis_data import get_stockanalysis_package
-from yfinance_data import get_yf_package
+from yfinance_data import build_info_df, get_yf_package
+
+from .fallback import stockanalysis_overview, yahoo_is_empty
 
 
 def prepare_ticker_data(ticker: str, charts_dir: str = "charts", logos_dir: str = "logos") -> Dict[str, Any]:
     """Returns prices, info, financials, charts, recs, df_ratios and logo_png for a ticker."""
     ##### loading the py files
-    data = get_yf_package(ticker, charts_dir=charts_dir)
+    warnings = []
+    try:
+        data = get_yf_package(ticker, charts_dir=charts_dir)
+    except Exception as e:  # Yahoo refuses many cloud hosts; keep going with what StockAnalysis has
+        warnings.append(f"Yahoo Finance failed ({e.__class__.__name__}); price history and analyst history are missing.")
+        data = {"history": pd.DataFrame(), "info": {}, "info_df": build_info_df({}), "recs_summary": None, "charts": {}}
+    if yahoo_is_empty(data["info"]):
+        fb = stockanalysis_overview(ticker)
+        if fb:
+            merged = {**data["info"], **{k: v for k, v in fb.items() if data["info"].get(k) is None}}
+            data["info"], data["info_df"] = merged, build_info_df(merged)
+            warnings.append("Yahoo Finance returned no company data from this host; name, price, market cap, ratios and "
+                            "analyst view were taken from StockAnalysis instead. Governance risks and sentiment history are missing.")
+        else:
+            warnings.append("Yahoo Finance returned no company data and the StockAnalysis fallback found nothing: "
+                            "the header, sentiment, volatility and risk ratings are empty.")
     sdata = get_stockanalysis_package(ticker)
     cdata = get_competitors_package(ticker)
 
@@ -76,4 +93,5 @@ def prepare_ticker_data(ticker: str, charts_dir: str = "charts", logos_dir: str 
     "recs": recs,
     "df_ratios": df_ratios,
     "logo_png": logo_png,
+    "warnings": warnings,
     }

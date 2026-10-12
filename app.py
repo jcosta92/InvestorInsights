@@ -38,7 +38,7 @@ def build_report(ticker: str, want_pdf: bool) -> dict:
         output_folder=str(WORK), export_pdf=want_pdf, price_chart_path=d["charts"].get("price"),
         recs=d["recs"], df_ratios=d["df_ratios"])
     scores = read_scores(xlsx)
-    return {"xlsx": xlsx, "pdf": pdf, "scores": scores}
+    return {"xlsx": xlsx, "pdf": pdf, "scores": scores, "pdf_error": getattr(create_basic_report, "last_pdf_error", None)}
 
 
 def money(v, cur):
@@ -96,6 +96,8 @@ except Exception as e:  # scrapers break when sites change; show the trace so it
 
 info, scores = d["info_dict"], rep["scores"]
 cur = info.get("currency")
+for w in d.get("warnings", []):
+    st.warning(w)
 
 # ---------------------------------------------------------------- header
 c1, c2 = st.columns([1, 5])
@@ -104,8 +106,10 @@ with c1:
         st.image(d["logo_png"], width="stretch")
 with c2:
     st.markdown(f"## {info.get('longName') or ticker}  \n`{ticker}` · {info.get('sector') or ''} · {info.get('industry') or ''} · {info.get('country') or ''}")
-    if scores["overall"] is not None:
-        st.markdown(f"### Overall score: **{100 * scores['overall']:.0f} / 100**")
+    overall = scores["overall"] if scores["overall"] else scores.get("overall_available")
+    if overall is not None:
+        note = "" if scores["overall"] else " <small>(over the metrics with data)</small>"
+        st.markdown(f"### Overall score: **{100 * overall:.0f} / 100**{note}", unsafe_allow_html=True)
 
 k = st.columns(6)
 k[0].metric("Price", f"{info.get('currentPrice')} {cur or ''}")
@@ -187,5 +191,6 @@ with tabs[5]:
         with open(rep["pdf"], "rb") as f:
             st.download_button("Download PDF report", f, file_name=os.path.basename(rep["pdf"]), mime="application/pdf")
     elif want_pdf:
-        st.info("PDF export needs Excel (Windows) or LibreOffice on this machine.")
+        st.info("The PDF was not produced." + (f" LibreOffice said: {rep['pdf_error']}" if rep.get("pdf_error") else
+                " PDF export needs Excel (Windows) or LibreOffice on this machine."))
     st.caption("Data is cached for 6 hours per ticker. Change the weights or rules in report_template.xlsx to change the rating.")
