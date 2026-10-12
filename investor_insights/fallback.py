@@ -176,6 +176,17 @@ def yahoo_governance(ticker: str) -> Dict[str, Any]:
         except Exception as e:
             out["_governance_http"] = f"{fetcher}: {e.__class__.__name__}"
     if not text:
+        # last resort: a public page-to-text relay, which reaches Yahoo from a different network
+        try:
+            r = requests.get(f"https://r.jina.ai/https://finance.yahoo.com/quote/{ticker.upper()}/profile/",
+                             headers={"Accept": "text/plain", "X-No-Cache": "true"}, timeout=40)
+            if r.status_code == 200 and "overnance" in r.text:
+                text = r.text
+            else:
+                out["_governance_http"] = (out.get("_governance_http", "") + f"; relay: HTTP {r.status_code}").strip("; ")
+        except Exception as e:
+            out["_governance_http"] = (out.get("_governance_http", "") + f"; relay: {e.__class__.__name__}").strip("; ")
+    if not text:
         return out
     for label, key in (("Audit", "auditRisk"), ("Board", "boardRisk"), ("Shareholder Rights", "shareHolderRightsRisk"),
                        ("Compensation", "compensationRisk")):
