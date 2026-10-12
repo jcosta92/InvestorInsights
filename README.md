@@ -2,20 +2,24 @@
 <img align="center" width="1000" alt="Header Image" src="https://raw.githubusercontent.com/jcosta92/InvestorInsights/main/header.jpg" />
 
 <details open>
-<summary><h2>0. Run it as an app</h2></summary>
+<summary><h2>0. Try the app</h2></summary>
+
+**Live: [investorinsights.streamlit.app](https://investorinsights.streamlit.app/)**
+
+Type a ticker and press **Build report**. The app scrapes the company's financial statements, ratios, competitors, analyst view and price history, fills the rating template, scores every metric from 0 to 5 stars and shows the weighted overall score out of 100, with the Excel and PDF reports to download. A report takes about 30 seconds; results are cached for six hours.
+
+Score tab: ☆☆☆☆☆ is a real rating of zero; — means the data for that metric was not available. The hosted version may lack a few Yahoo-only fields (governance risk scores, the 3-month analyst history) when Yahoo refuses the host; the laptop version has them all.
+
+Run it yourself:
 
 ```bash
 pip install -r requirements.txt
 streamlit run app.py
 ```
 
-Type a ticker, press **Build report**: the app scrapes the data, fills the template, rates every metric and shows the overall score, the price history, the financials, the competitors and the company profile, with the Excel and PDF reports to download. About 30 seconds per ticker; results are cached for 6 hours.
+The PDF and the ratings need a spreadsheet engine for the template's formulas: Excel on Windows (used automatically) or [LibreOffice](https://www.libreoffice.org/) anywhere (`soffice` on the PATH; `packages.txt` installs it on Streamlit Community Cloud). The logo needs Inkscape.
 
-The PDF and the ratings need a spreadsheet engine to calculate the template's formulas: Excel on Windows (used automatically) or [LibreOffice](https://www.libreoffice.org/) anywhere (`soffice` on the PATH). The logo still needs Inkscape, as before; without it the report has no logo.
-
-**Hosted version (Streamlit Community Cloud).** The repo has `packages.txt` (LibreOffice and Inkscape for the PDF, the formulas and the logo) and `.streamlit/config.toml`. To publish: sign in at share.streamlit.io with GitHub, *Create app*, pick `jcosta92/InvestorInsights`, branch `main`, main file `app.py`, *Deploy*. The first build takes a few minutes; afterwards every push to `main` redeploys. If StockAnalysis or MarketBeat block the host's IP, the app shows the error with the traceback.
-
-Code layout: the scrapers are unchanged (`yfinance_data.py`, `stock_analysis_data.py`, `competitors_data.py`, `logo_stockanalysis.py`); `investor_insights/pipeline.py` assembles their output and `investor_insights/report.py` fills and exports the template; `app.py` is the interface and `Model.ipynb` runs the same thing for a list of tickers.
+Code layout: the scrapers are unchanged (`yfinance_data.py`, `stock_analysis_data.py`, `competitors_data.py`, `logo_stockanalysis.py`); `investor_insights/pipeline.py` assembles their output, with StockAnalysis and Yahoo-page fallbacks when the Yahoo API is unavailable; `investor_insights/report.py` fills and exports the template; `app.py` is the interface and `Model.ipynb` runs the same thing for a list of tickers.
 
 </details>
 
