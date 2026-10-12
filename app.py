@@ -23,7 +23,7 @@ WORK = Path(tempfile.gettempdir()) / "investor_insights"
 WORK.mkdir(exist_ok=True)
 
 
-APP_VERSION = 3   # bump to invalidate cached results after a code change
+APP_VERSION = 4   # bump to invalidate cached results after a code change
 
 
 @st.cache_data(ttl=6 * 3600, show_spinner=False)
@@ -137,7 +137,8 @@ with tabs[0]:
         for cat, g in m.groupby("category", sort=False):
             st.markdown(f"**{cat}**")
             st.dataframe(g[["metric", "rating", "weight"]].set_index("metric"), width="stretch")
-    st.caption("0–5 stars per metric from the rules in the template; the overall score is the weighted average, out of 100.")
+    st.caption("0–5 stars per metric from the rules in the template; ☆☆☆☆☆ is a real rating of zero, — means the data for that "
+               "metric is missing. The overall score is the weighted average, out of 100.")
 
 with tabs[1]:
     prices = d["prices"]
@@ -205,4 +206,5 @@ with st.expander("Diagnostics"):
               "financial lines": len(d["financials"]), "peers": 0 if d["df_ratios"] is None else len(d["df_ratios"]),
               "template overall": scores["overall"], "overall over available metrics": scores.get("overall_available"),
               "rated metrics": int(scores["metrics"].rating.notna().sum()) if not scores["metrics"].empty else 0,
-              "pdf": rep["pdf"], "pdf error": rep.get("pdf_error"), "yahoo error": d.get("yahoo_error")})
+              "pdf": rep["pdf"], "pdf error": rep.get("pdf_error"), "yahoo error": d.get("yahoo_error"),
+              "stockanalysis overview labels": info.get("_overview_labels"), "stockanalysis statistics labels": info.get("_stat_labels")})

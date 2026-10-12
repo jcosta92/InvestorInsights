@@ -102,6 +102,40 @@ def stockanalysis_overview(ticker: str, base_url: str | None = None) -> Dict[str
                 info["numberOfAnalystOpinions"] = int(m.group(1))
         info["currency"] = "USD" if "/stocks/" in base else None
 
+    # facts still missing: the statistics page repeats market cap, dividend yield, beta, margins
+    if any(info.get(k) is None for k in ("marketCap", "dividendYield", "beta", "profitMargins")):
+        stats = _get(base + "/statistics/")
+        if stats is not None:
+            pairs = _pairs(stats)
+            info.setdefault("_stat_labels", list(pairs)[:80])
+            for label, key in (("market cap", "marketCap"), ("dividend yield", "dividendYield"), ("beta (5y)", "beta"),
+                               ("beta", "beta"), ("profit margin", "profitMargins"), ("forward pe", "forwardPE"), ("pe ratio", "trailingPE")):
+                if info.get(key) is None and label in pairs:
+                    raw = pairs[label]
+                    if key == "dividendYield":
+                        m = re.search(r"(\d+(?:\.\d+)?)%", raw)
+                        info[key] = float(m.group(1)) if m else None
+                    elif key == "profitMargins":
+                        v = _num(raw.rstrip("%")); info[key] = v / 100 if v is not None else None
+                    else:
+                        info[key] = _num(raw)
+    # "Dividend" on the overview reads like "$3.32 (0.62%)"
+    if info.get("dividendYield") is None and soup is not None:
+        pairs = _pairs(soup)
+        for label in ("dividend", "dividend (yield)", "dividend yield"):
+            m = re.search(r"\((\d+(?:\.\d+)?)%\)", pairs.get(label, ""))
+            if m:
+                info["dividendYield"] = float(m.group(1)); break
+    # number of analysts lives on the forecast page: "... based on 42 analysts ..."
+    if not info.get("numberOfAnalystOpinions"):
+        fc = _get(base + "/forecast/")
+        if fc is not None:
+            m = re.search(r"(\d+)\s+analysts?", fc.get_text(" ", strip=True))
+            if m:
+                info["numberOfAnalystOpinions"] = int(m.group(1))
+    if soup is not None:
+        info.setdefault("_overview_labels", list(_pairs(soup))[:80])
+
     comp = _get(base + "/company/")
     if comp is not None:
         pairs = _pairs(comp)
@@ -113,7 +147,7 @@ def stockanalysis_overview(ticker: str, base_url: str | None = None) -> Dict[str
             paras = [p for p in paras if len(p) > 200]
             if paras:
                 info["longBusinessSummary"] = paras[0]
-    return {k: v for k, v in info.items() if v is not None}
+    return {k: v for k, v in info.items() if v is not None}  # keys starting with _ are diagnostics
 
 
 def yahoo_is_empty(info: Dict[str, Any]) -> bool:
