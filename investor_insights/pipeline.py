@@ -27,6 +27,21 @@ def prepare_ticker_data(ticker: str, charts_dir: str = "charts", logos_dir: str 
     except Exception as e:  # Yahoo refuses many cloud hosts; keep going with what StockAnalysis has
         warnings.append(f"Yahoo Finance failed ({e.__class__.__name__}); price history and analyst history are missing.")
         data = {"history": pd.DataFrame(), "info": {}, "info_df": build_info_df({}), "recs_summary": None, "charts": {}}
+    yahoo_error = None
+    if yahoo_is_empty(data["info"]):
+        # second try: a browser-like session, which gets past Yahoo's blocking of cloud hosts more often
+        try:
+            from curl_cffi import requests as cffi_requests
+            import yfinance as yf
+            tk = yf.Ticker(ticker, session=cffi_requests.Session(impersonate="chrome"))
+            info2 = tk.info or {}
+            if not yahoo_is_empty(info2):
+                data["info"], data["info_df"] = info2, build_info_df(info2)
+                if data["history"] is None or data["history"].empty:
+                    data["history"] = tk.history(period="5y", interval="1d")
+                warnings.append("Yahoo Finance answered only on a second attempt with a browser-like session.")
+        except Exception as e:
+            yahoo_error = f"{e.__class__.__name__}: {str(e)[:300]}"
     if yahoo_is_empty(data["info"]):
         fb = stockanalysis_overview(ticker)
         if fb:
@@ -94,4 +109,5 @@ def prepare_ticker_data(ticker: str, charts_dir: str = "charts", logos_dir: str 
     "df_ratios": df_ratios,
     "logo_png": logo_png,
     "warnings": warnings,
+    "yahoo_error": yahoo_error,
     }

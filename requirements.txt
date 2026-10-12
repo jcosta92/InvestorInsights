@@ -8,3 +8,4 @@ pillow
 matplotlib
 streamlit>=1.40
 pywin32; sys_platform == "win32"
+curl_cffi

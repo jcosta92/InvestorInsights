@@ -23,15 +23,18 @@ WORK = Path(tempfile.gettempdir()) / "investor_insights"
 WORK.mkdir(exist_ok=True)
 
 
+APP_VERSION = 3   # bump to invalidate cached results after a code change
+
+
 @st.cache_data(ttl=6 * 3600, show_spinner=False)
-def fetch(ticker: str) -> dict:
+def fetch(ticker: str, _v: int = APP_VERSION) -> dict:
     d = prepare_ticker_data(ticker, charts_dir=str(WORK / "charts"), logos_dir=str(WORK / "logos"))
     d["info_dict"] = dict(zip(d["info"]["Field"], d["info"]["Value"]))
     return d
 
 
 @st.cache_data(ttl=6 * 3600, show_spinner=False)
-def build_report(ticker: str, want_pdf: bool) -> dict:
+def build_report(ticker: str, want_pdf: bool, _v: int = APP_VERSION) -> dict:
     d = fetch(ticker)
     xlsx, pdf = create_basic_report(
         info=d["info"], financials=d["financials"], prices=d["prices"], ticker=ticker, logo_png=d["logo_png"],
@@ -194,3 +197,12 @@ with tabs[5]:
         st.info("The PDF was not produced." + (f" LibreOffice said: {rep['pdf_error']}" if rep.get("pdf_error") else
                 " PDF export needs Excel (Windows) or LibreOffice on this machine."))
     st.caption("Data is cached for 6 hours per ticker. Change the weights or rules in report_template.xlsx to change the rating.")
+
+with st.expander("Diagnostics"):
+    import platform, yfinance
+    st.write({"python": platform.python_version(), "yfinance": yfinance.__version__, "exporter": exporter,
+              "yahoo fields with data": sum(v is not None for v in info.values()), "warnings": d.get("warnings"),
+              "financial lines": len(d["financials"]), "peers": 0 if d["df_ratios"] is None else len(d["df_ratios"]),
+              "template overall": scores["overall"], "overall over available metrics": scores.get("overall_available"),
+              "rated metrics": int(scores["metrics"].rating.notna().sum()) if not scores["metrics"].empty else 0,
+              "pdf": rep["pdf"], "pdf error": rep.get("pdf_error"), "yahoo error": d.get("yahoo_error")})
