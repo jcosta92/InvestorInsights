@@ -15,7 +15,7 @@ from logo_stockanalysis import get_logo_png
 from stock_analysis_data import get_stockanalysis_package
 from yfinance_data import build_info_df, get_yf_package
 
-from .fallback import stockanalysis_overview, yahoo_is_empty
+from .fallback import stockanalysis_overview, yahoo_governance, yahoo_is_empty
 
 
 def prepare_ticker_data(ticker: str, charts_dir: str = "charts", logos_dir: str = "logos") -> Dict[str, Any]:
@@ -99,6 +99,17 @@ def prepare_ticker_data(ticker: str, charts_dir: str = "charts", logos_dir: str 
 
     # getting logo
     logo_png = get_logo_png(ticker, out_dir=logos_dir)
+
+    # governance risks come only from Yahoo; try its profile page when the API gave none
+    if data["info"].get("overallRisk") is None and data["info"].get("auditRisk") is None:
+        gov = yahoo_governance(ticker)
+        if any(k in gov for k in ("auditRisk", "boardRisk", "compensationRisk", "shareHolderRightsRisk", "overallRisk")):
+            data["info"] = {**data["info"], **gov}
+            info = build_info_df(data["info"])
+            warnings.append("Governance risk scores were read from Yahoo's profile page.")
+        else:
+            warnings.append("Governance risk scores (Yahoo/ISS) could not be fetched from this host"
+                            + (f": {gov['_governance_http']}" if gov.get("_governance_http") else "") + ".")
 
     return {
     "prices": prices,

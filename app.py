@@ -23,7 +23,7 @@ WORK = Path(tempfile.gettempdir()) / "investor_insights"
 WORK.mkdir(exist_ok=True)
 
 
-APP_VERSION = 4   # bump to invalidate cached results after a code change
+APP_VERSION = 5   # bump to invalidate cached results after a code change
 
 
 @st.cache_data(ttl=6 * 3600, show_spinner=False)

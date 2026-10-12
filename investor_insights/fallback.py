@@ -152,3 +152,37 @@ def stockanalysis_overview(ticker: str, base_url: str | None = None) -> Dict[str
 
 def yahoo_is_empty(info: Dict[str, Any]) -> bool:
     return not info or not (info.get("longName") or info.get("currentPrice") or info.get("marketCap"))
+
+
+def yahoo_governance(ticker: str) -> Dict[str, Any]:
+    """The four ISS governance pillar scores from Yahoo's profile page (HTML, not the API that
+    cloud hosts get blocked on). Text looks like: "... pillar scores are Audit: 3; Board: 4;
+    Shareholder Rights: 2; Compensation: 5." and "ISS Governance QualityScore ... is 3".
+    Returns {} if the page is refused or the sentence is not there."""
+    out: Dict[str, Any] = {}
+    text = None
+    for fetcher in ("curl_cffi", "requests"):
+        try:
+            url = f"https://finance.yahoo.com/quote/{ticker.upper()}/profile/"
+            if fetcher == "curl_cffi":
+                from curl_cffi import requests as cr
+                r = cr.get(url, impersonate="chrome", timeout=20, headers={"Accept-Language": "en-US,en;q=0.9"})
+            else:
+                r = requests.get(url, headers={**HEADERS, "Accept-Language": "en-US,en;q=0.9"}, timeout=20)
+            if r.status_code == 200 and "overnance" in r.text:
+                text = BeautifulSoup(r.text, "html.parser").get_text(" ", strip=True)
+                break
+            out["_governance_http"] = f"{fetcher}: HTTP {r.status_code}"
+        except Exception as e:
+            out["_governance_http"] = f"{fetcher}: {e.__class__.__name__}"
+    if not text:
+        return out
+    for label, key in (("Audit", "auditRisk"), ("Board", "boardRisk"), ("Shareholder Rights", "shareHolderRightsRisk"),
+                       ("Compensation", "compensationRisk")):
+        m = re.search(label + r"\s*:\s*(\d+)", text)
+        if m:
+            out[key] = int(m.group(1))
+    m = re.search(r"QualityScore[^.]{0,80}?\bis\s+(\d+)", text)
+    if m:
+        out["overallRisk"] = int(m.group(1))
+    return out
