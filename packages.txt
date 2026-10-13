@@ -1,3 +1,4 @@
 libreoffice-calc
 libreoffice-core
 inkscape
+libcairo2

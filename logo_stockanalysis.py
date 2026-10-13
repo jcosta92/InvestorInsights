@@ -7,6 +7,7 @@ Fetches a company's logo from StockAnalysis and converts it to PNG using Inkscap
 import requests
 from bs4 import BeautifulSoup
 from pathlib import Path
+import shutil
 import subprocess
 import urllib3
 
@@ -23,6 +24,8 @@ def get_logo_png(
 
     # 🔥 Adjust this path if Inkscape is installed elsewhere!! 🔥
     inkscape_path = r"C:\Program Files\Inkscape\bin\inkscape.exe"
+    if not Path(inkscape_path).exists():          # Linux / macOS / cloud host: use the one on PATH
+        inkscape_path = shutil.which("inkscape") or inkscape_path
     # 🔥 Adjust this path if Inkscape is installed elsewhere!! 🔥
 
     ticker_lower = ticker.lower()
@@ -91,15 +94,18 @@ def get_logo_png(
       #  print(f"[logo] Running Inkscape: {' '.join(inkscape_cmd)}")
 
     try:
-        subprocess.run(inkscape_cmd, check=True)
-    except FileNotFoundError:
-        print(
-            "[logo] Error: 'inkscape' not found. "
-            "Update 'inkscape_path' in get_logo_png() to the correct location."
-        )
-        return None
-    except subprocess.CalledProcessError as e:
-        print(f"[logo] Inkscape failed: {e}")
+        subprocess.run(inkscape_cmd, check=True, capture_output=True, timeout=60)
+        if png_path.exists():
+            return png_path
+    except (FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+        print(f"[logo] Inkscape unavailable or failed ({e.__class__.__name__}); trying cairosvg")
+
+    # fallback without Inkscape (cloud hosts): cairosvg renders the SVG directly
+    try:
+        import cairosvg
+        cairosvg.svg2png(bytestring=svg_resp.content, write_to=str(png_path), dpi=dpi, output_height=400)
+    except Exception as e:
+        print(f"[logo] cairosvg failed: {e}")
         return None
 
    # if verbose:

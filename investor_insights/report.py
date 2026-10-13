@@ -567,6 +567,21 @@ def create_basic_report(
     output_excel = os.path.join(reports_folder, f"report_{safe_ticker}.xlsx")
     output_pdf_path = os.path.join(reports_folder, f"report_{safe_ticker}.pdf")
 
+    if not HAS_WIN32:
+        # LibreOffice ignores Excel's own page choices for this template (scale 45, printer
+        # default paper), so it prints helper columns U:AH and splits every row across
+        # pages. Pin the layout: columns B:P, A4 portrait, one page wide.
+        ws.print_area = "B1:P295"
+        ws.page_setup.paperSize = ws.PAPERSIZE_A4
+        ws.page_setup.orientation = "portrait"
+        ws.page_setup.fitToWidth = 1
+        ws.page_setup.fitToHeight = 0
+        ws.page_setup.scale = None
+        ws.sheet_properties.pageSetUpPr.fitToPage = True
+        ws.print_options.horizontalCentered = True
+        ws.page_margins.left = ws.page_margins.right = 0.4
+        ws.page_margins.top = ws.page_margins.bottom = 0.5
+
     wb.save(output_excel)
 
     # export: Excel on Windows if available, otherwise LibreOffice (also recalculates)
