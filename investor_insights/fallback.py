@@ -143,11 +143,42 @@ def stockanalysis_overview(ticker: str, base_url: str | None = None) -> Dict[str
             if label in pairs and not info.get(key):
                 info[key] = _num(pairs[label]) if key == "fullTimeEmployees" else pairs[label]
         if not info.get("longBusinessSummary"):
-            paras = [p.get_text(" ", strip=True) for p in comp.find_all("p")]
-            paras = [p for p in paras if len(p) > 200]
-            if paras:
-                info["longBusinessSummary"] = paras[0]
+            info["longBusinessSummary"] = pick_description(comp, info.get("longName", ""), ticker)
     return {k: v for k, v in info.items() if v is not None}  # keys starting with _ are diagnostics
+
+
+BOILERPLATE = ("provided by", "sourced from", "sourced directly", "s&p global", "sec.gov", "eod historical",
+               "cookie", "subscribe", "upgrade to", "pro members", "terms of use", "disclaimer", "list of executives")
+
+
+def pick_description(soup: BeautifulSoup, name: str, ticker: str) -> str | None:
+    """The business description from a StockAnalysis company page.
+    Skips the data-attribution footer ("The company profile ... is provided by S&P Global ...")
+    and prefers paragraphs that talk about the company itself."""
+    first_word = (name.split()[0] if name else ticker).lower()
+    best, best_score, best_el = None, 0.0, None
+    for p in soup.find_all(["p", "div"]):
+        if p.find(["p", "div"]):           # only leaf blocks, so we don't take a whole section at once
+            continue
+        text = p.get_text(" ", strip=True)
+        low = text.lower()
+        if len(text) < 120 or any(b in low for b in BOILERPLATE):
+            continue
+        score = len(text)
+        if first_word and first_word in low:
+            score *= 3
+        if any(w in low for w in (" operates", " designs", " provides", " develops", " engages", " manufactures",
+                                   " offers", " is a ", " was founded", " was incorporated", " headquartered")):
+            score *= 2
+        if score > best_score:
+            best, best_score, best_el = text, score, p
+    # the description is often split over several paragraphs in the same block: keep them together
+    if best_el is not None and best_el.parent is not None:
+        parts = [s.get_text(" ", strip=True) for s in best_el.parent.find_all("p", recursive=False)]
+        parts = [s for s in parts if s and not any(b in s.lower() for b in BOILERPLATE)]
+        if best in parts and len(parts) > 1:
+            best = " ".join(parts)
+    return best
 
 
 def yahoo_is_empty(info: Dict[str, Any]) -> bool:
