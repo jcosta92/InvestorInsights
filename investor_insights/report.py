@@ -190,24 +190,25 @@ def create_basic_report(
         c.value = dt
         c.number_format = "dd/mm/yy"
 
+    # excel number format for values in millions with currency, e.g. 1 234,5 M $
+    def millions_format(currency=None):
+        if currency == "USD":
+            return '#,##0.0 "M $"'
+        if currency == "EUR":
+            return '#,##0.0 "M €"'
+        if currency:
+            return f'#,##0.0 "M {currency}"'
+        return '#,##0.0 "M"'
+
     # formatting values to millions with currency
     def set_millions(sheet, cell_ref, value, currency=None):
-        
+
         if value is None or (isinstance(value, float) and math.isnan(value)):
             return
 
         c = sheet[cell_ref]
         c.value = float(value) / 1_000_000.0
-
-        if currency == "USD":
-            fmt = '#,##0.0 "M $"'
-        elif currency == "EUR":
-            fmt = '#,##0.0 "M €"'
-        elif currency is not None:
-            fmt = f'#,##0.0 "M {currency}"'
-        else:
-            fmt = '#,##0.0 "M"'
-        c.number_format = fmt
+        c.number_format = millions_format(currency)
 
     # cleaning out , and . to excel
     def to_float_eu(x):
@@ -437,6 +438,15 @@ def create_basic_report(
         "Common Dividends Paid"
     }
 
+    # template rows whose cells are formulas over MILLION_METRICS rows (e.g. "sum w/ net income"
+    # = Net Income + Common Dividends Paid). They are not in the financials df, so the loop
+    # below never touches them; they still need the millions + currency format.
+    DERIVED_MILLION_ROWS = {
+        "Yearly Net Earnings",
+        "Net Issuance of stock",
+        "sum w/ net income",
+    }
+
     financials.index = financials.index.astype(str).str.strip()
 
     INDEX_COL = 2       # column B
@@ -451,8 +461,17 @@ def create_basic_report(
 
         label = str(label_val).strip()
 
+        # derived rows: keep the template formulas, only apply the millions + currency format
+        if label in DERIVED_MILLION_ROWS:
+            for col in range(FIRST_COL, LAST_COL + 1):
+                cell = ws.cell(row=row, column=col)
+                if isinstance(cell, MergedCell):
+                    continue
+                cell.number_format = millions_format(company_currency)
+            continue
+
         if label not in financials.index:
-            continue  
+            continue
 
         df_row = financials.loc[label]
 
@@ -472,15 +491,7 @@ def create_basic_report(
             # million metrics
             if label in MILLION_METRICS:
                 cell.value = float(val_num)
-                if company_currency == "USD":
-                    fmt = '#,##0.0 "M $"'
-                elif company_currency == "EUR":
-                    fmt = '#,##0.0 "M €"'
-                elif company_currency:
-                    fmt = f'#,##0.0 "M {company_currency}"'
-                else:
-                    fmt = '#,##0.0 "M"'
-                cell.number_format = fmt
+                cell.number_format = millions_format(company_currency)
 
             else:
                 # percentages: keep % as in df
