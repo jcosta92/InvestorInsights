@@ -151,6 +151,43 @@ BOILERPLATE = ("provided by", "sourced from", "sourced directly", "s&p global", 
                "cookie", "subscribe", "upgrade to", "pro members", "terms of use", "disclaimer", "list of executives")
 
 
+def stockanalysis_recommendations(ticker: str, base_url: str | None = None):
+    """Analyst rating counts for this month and the 3 before, from the data embedded in
+    StockAnalysis's forecast page (TipRanks), shaped like yfinance's recommendations_summary:
+    columns period, strongBuy, buy, hold, sell, strongSell; rows 0m, -1m, -2m, -3m.
+    Returns None when the page or the data is missing."""
+    import pandas as pd
+
+    base = (base_url or f"https://stockanalysis.com/stocks/{ticker.lower()}").rstrip("/")
+    try:
+        r = requests.get(base + "/forecast/", headers=HEADERS, timeout=15)
+        if r.status_code != 200:
+            return None
+        html = r.text
+    except Exception:
+        return None
+    start = html.find("recommendations:[")
+    if start < 0:
+        return None
+    end = html.find("]", start)
+    rows = []
+    for obj in re.findall(r"\{[^{}]*\}", html[start:end]):
+        fields = dict(re.findall(r"(\w+):(\d+(?:\.\d+)?|\"[^\"]*\")", obj))
+        if "date" not in fields:
+            continue
+        try:
+            rows.append({"date": fields["date"].strip('"'),
+                         **{k: int(float(fields.get(k, 0))) for k in ("strongBuy", "buy", "hold", "sell", "strongSell")}})
+        except ValueError:
+            continue
+    if not rows:
+        return None
+    rows = sorted(rows, key=lambda x: x["date"], reverse=True)[:4]   # latest month first
+    df = pd.DataFrame(rows).drop(columns="date")
+    df.insert(0, "period", [f"{-i}m" if i else "0m" for i in range(len(df))])
+    return df
+
+
 def pick_description(soup: BeautifulSoup, name: str, ticker: str) -> str | None:
     """The business description from a StockAnalysis company page.
     Skips the data-attribution footer ("The company profile ... is provided by S&P Global ...")
