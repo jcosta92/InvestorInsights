@@ -23,7 +23,7 @@ WORK = Path(tempfile.gettempdir()) / "investor_insights"
 WORK.mkdir(exist_ok=True)
 
 
-APP_VERSION = 8   # bump to invalidate cached results after a code change
+APP_VERSION = 9   # bump to invalidate cached results after a code change
 
 
 @st.cache_data(ttl=6 * 3600, show_spinner=False)
@@ -174,7 +174,8 @@ with tabs[2]:
 with tabs[3]:
     r = d["df_ratios"]
     if r is not None and not r.empty:
-        st.markdown("**Competitors** (MarketBeat peers, ratios from StockAnalysis, CAGR from price history)")
+        st.markdown(f"**Competitors** ({d.get('peers_source', 'MarketBeat')} peers, ratios from StockAnalysis, "
+                    "CAGR from price history)")
         st.dataframe(r.set_index("ticker") if "ticker" in r.columns else r, width="stretch")
     else:
         st.info("No competitor data found for this ticker.")

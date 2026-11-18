@@ -10,12 +10,36 @@ from typing import Any, Dict
 
 import pandas as pd
 
-from competitors_data import get_competitors_package
+from competitors_data import get_competitors_from_marketbeat, get_ratios_for_peers_from_stockanalysis
 from logo_stockanalysis import get_logo_png
 from stock_analysis_data import get_stockanalysis_package
 from yfinance_data import build_info_df, get_yf_package
 
 from .fallback import stockanalysis_overview, yahoo_governance, yahoo_is_empty
+from .peers import stockanalysis_peers
+
+N_PEERS = 5  # the template has room for the ticker plus 9 peers (rows 192-201)
+
+
+def _peer_ratios(ticker: str, market_cap, warnings: list) -> tuple[pd.DataFrame, str]:
+    """Competitor ratios: MarketBeat's peer list, or StockAnalysis industry peers when MarketBeat refuses."""
+    ticker = ticker.upper()
+    try:
+        tickers = get_competitors_from_marketbeat(ticker)["ticker"].tolist()
+    except Exception:
+        tickers = [ticker]
+    source = "MarketBeat"
+    if len(tickers) <= 1:
+        peers = stockanalysis_peers(ticker, n=N_PEERS, market_cap=market_cap)
+        if peers:
+            tickers, source = [ticker] + peers, "StockAnalysis industry"
+            warnings.append("MarketBeat refused the competitor lookup; competitors are the companies in the same "
+                            "StockAnalysis industry closest in market cap.")
+        else:
+            source = "none"
+            warnings.append("No competitors found (MarketBeat refused and the StockAnalysis industry lookup failed): "
+                            "the 'average of its competitors' ratings compare the company only with itself.")
+    return get_ratios_for_peers_from_stockanalysis(pd.DataFrame({"ticker": tickers})), source
 
 
 def prepare_ticker_data(ticker: str, charts_dir: str = "charts", logos_dir: str = "logos") -> Dict[str, Any]:
@@ -53,7 +77,7 @@ def prepare_ticker_data(ticker: str, charts_dir: str = "charts", logos_dir: str 
             warnings.append("Yahoo Finance returned no company data and the StockAnalysis fallback found nothing: "
                             "the header, sentiment, volatility and risk ratings are empty.")
     sdata = get_stockanalysis_package(ticker)
-    cdata = get_competitors_package(ticker)
+    df_ratios, peers_source = _peer_ratios(ticker, data["info"].get("marketCap"), warnings)
 
     #### creating dfs
 
@@ -94,9 +118,6 @@ def prepare_ticker_data(ticker: str, charts_dir: str = "charts", logos_dir: str 
     # apply in financials
     financials = financials[ordered]
 
-    # from competitors ratios
-    df_ratios = cdata["df_ratios"]
-
     # getting logo
     logo_png = get_logo_png(ticker, out_dir=logos_dir)
 
@@ -118,6 +139,7 @@ def prepare_ticker_data(ticker: str, charts_dir: str = "charts", logos_dir: str 
     "charts": charts,
     "recs": recs,
     "df_ratios": df_ratios,
+    "peers_source": peers_source,
     "logo_png": logo_png,
     "warnings": warnings,
     "yahoo_error": yahoo_error,

@@ -100,10 +100,18 @@ def get_competitors_from_marketbeat(ticker: str, verbose: bool = True) -> pd.Dat
         #if verbose:
             #print(f"Trying URL: {url}")
 
-        resp = requests.get(url, headers=headers)
+        try:
+            resp = requests.get(url, headers=headers, timeout=15)
+        except requests.RequestException as e:
+            if verbose:
+                print(f"  -> {e.__class__.__name__}, skipping")
+            continue
         if resp.status_code != 200:
             if verbose:
                 print(f"  -> HTTP {resp.status_code}, skipping")
+            # Cloudflare bot challenge: every exchange URL gets the same answer, stop here
+            if resp.headers.get("cf-mitigated") == "challenge":
+                break
             continue
 
         # calling Bsoup to parse
@@ -182,7 +190,14 @@ def get_price_cagr(ticker: str, years: int = 5):
     if isinstance(prices, pd.DataFrame):
         prices = prices.iloc[:, 0]
 
+    prices = prices.dropna()
     if len(prices) < 2:
+        return np.nan
+
+    # a recent listing has less history than asked for: dividing by `years` would
+    # understate its growth, so report no CAGR rather than a wrong one
+    covered_years = (prices.index[-1] - prices.index[0]).days / 365.25
+    if covered_years < years * 0.95:
         return np.nan
 
     start_price = float(prices.iloc[0])
