@@ -15,7 +15,7 @@ from logo_stockanalysis import get_logo_png
 from stock_analysis_data import get_stockanalysis_package
 from yfinance_data import build_info_df, get_yf_package
 
-from .fallback import stockanalysis_overview, yahoo_governance, yahoo_is_empty
+from .fallback import stockanalysis_overview, stockanalysis_recommendations, yahoo_governance, yahoo_is_empty
 from .peers import stockanalysis_peers
 
 N_PEERS = 5  # the template has room for the ticker plus 9 peers (rows 192-201)
@@ -49,7 +49,7 @@ def prepare_ticker_data(ticker: str, charts_dir: str = "charts", logos_dir: str 
     try:
         data = get_yf_package(ticker, charts_dir=charts_dir)
     except Exception as e:  # Yahoo refuses many cloud hosts; keep going with what StockAnalysis has
-        warnings.append(f"Yahoo Finance failed ({e.__class__.__name__}); price history and analyst history are missing.")
+        warnings.append(f"Yahoo Finance failed ({e.__class__.__name__}); price history is missing.")
         data = {"history": pd.DataFrame(), "info": {}, "info_df": build_info_df({}), "recs_summary": None, "charts": {}}
     yahoo_error = None
     if yahoo_is_empty(data["info"]):
@@ -72,10 +72,19 @@ def prepare_ticker_data(ticker: str, charts_dir: str = "charts", logos_dir: str 
             merged = {**data["info"], **{k: v for k, v in fb.items() if data["info"].get(k) is None}}
             data["info"], data["info_df"] = merged, build_info_df(merged)
             warnings.append("Yahoo Finance returned no company data from this host; name, price, market cap, ratios and "
-                            "analyst view were taken from StockAnalysis instead. Governance risks and sentiment history are missing.")
+                            "analyst view were taken from StockAnalysis instead.")
         else:
             warnings.append("Yahoo Finance returned no company data and the StockAnalysis fallback found nothing: "
                             "the header, sentiment, volatility and risk ratings are empty.")
+    # analyst counts (now and 1-3 months ago) come only from Yahoo; StockAnalysis's forecast page has them too
+    if data["recs_summary"] is None or len(data["recs_summary"]) == 0:
+        recs_fb = stockanalysis_recommendations(ticker)
+        if recs_fb is not None:
+            data["recs_summary"] = recs_fb
+            warnings.append("Analyst rating counts (now and 1-3 months ago) were taken from StockAnalysis (TipRanks data); "
+                            "its analyst panel differs from Yahoo's, so the counts are not comparable with older reports.")
+        else:
+            warnings.append("Analyst rating counts could not be fetched from Yahoo or StockAnalysis: the sentiment table is empty.")
     sdata = get_stockanalysis_package(ticker)
     df_ratios, peers_source = _peer_ratios(ticker, data["info"].get("marketCap"), warnings)
 
