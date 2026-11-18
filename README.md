@@ -19,7 +19,7 @@ streamlit run app.py
 
 The PDF and the ratings need a spreadsheet engine for the template's formulas: Excel on Windows (used automatically) or [LibreOffice](https://www.libreoffice.org/) anywhere (`soffice` on the PATH; `packages.txt` installs it on Streamlit Community Cloud). The logo needs Inkscape.
 
-Code layout: the scrapers are unchanged (`yfinance_data.py`, `stock_analysis_data.py`, `competitors_data.py`, `logo_stockanalysis.py`); `investor_insights/pipeline.py` assembles their output, with StockAnalysis and Yahoo-page fallbacks when the Yahoo API is unavailable; `investor_insights/report.py` fills and exports the template; `app.py` is the interface and `Model.ipynb` runs the same thing for a list of tickers.
+Code layout: the scrapers are unchanged (`yfinance_data.py`, `stock_analysis_data.py`, `competitors_data.py`, `logo_stockanalysis.py`); `investor_insights/pipeline.py` assembles their output, with StockAnalysis and Yahoo-page fallbacks when the Yahoo API is unavailable and StockAnalysis industry peers (`investor_insights/peers.py`) when MarketBeat's bot protection refuses the competitor lookup; `investor_insights/report.py` fills and exports the template; `app.py` is the interface and `Model.ipynb` runs the same thing for a list of tickers.
 
 </details>
 
@@ -57,7 +57,7 @@ This is an interface between Excel and Python. The Excel template is used to cal
 
 - Web scraping:
    - [*stockanalysis.com*](https://www.stockanalysis.com)
-   - [*marketbeat.com*](https://www.marketbeat.com)
+   - [*marketbeat.com*](https://www.marketbeat.com) (competitors; StockAnalysis industry pages when MarketBeat is unavailable)
 - Yfinance library
 
 </details>
